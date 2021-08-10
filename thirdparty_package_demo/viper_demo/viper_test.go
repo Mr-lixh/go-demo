@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/pelletier/go-toml"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"os"
 	"testing"
 )
 
@@ -23,7 +26,7 @@ port = "3306"
 	if err := v.ReadConfig(bytes.NewBuffer(tomlExample)); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(v.Get("server").(map[string]interface{})["host"])
+	fmt.Println(v.GetStringMapString("mysql")["host"])
 }
 
 func TestLoadTomlFromFile(t *testing.T) {
@@ -80,7 +83,7 @@ func TestExtractSubTree(t *testing.T) {
 	fmt.Println(mysqlConfig.AllSettings())
 }
 
-func TestMigrateTomlFromFiles(t *testing.T) {
+func TestMergeTomlFromFiles(t *testing.T) {
 	v := viper.New()
 	v.SetConfigFile("./testdata/test1.toml")
 	if err := v.ReadInConfig(); err != nil {
@@ -97,7 +100,7 @@ func TestMigrateTomlFromFiles(t *testing.T) {
 	}
 }
 
-func TestMigrateTomlFromIOReader(t *testing.T) {
+func TestMergeTomlFromIOReader(t *testing.T) {
 	v := viper.New()
 	v.SetConfigFile("./testdata/test1.toml")
 	if err := v.ReadInConfig(); err != nil {
@@ -117,4 +120,131 @@ func TestMigrateTomlFromIOReader(t *testing.T) {
 	if v.GetStringMap("mysql")["port"].(int64) != 3317 {
 		t.Fatal(fmt.Sprintf("mysql port is %v, expected is 3317\n", v.GetStringMap("mysql")["port"]))
 	}
+}
+
+func TestWriteToFile(t *testing.T) {
+	const TempFile = "./testdata/test.toml"
+	defer os.Remove(TempFile)
+
+	example := []byte(`
+[test]
+host = "127.0.0.1"
+port = 3306
+`)
+	v := viper.New()
+	v.SetConfigFile(TempFile)
+	if err := v.ReadConfig(bytes.NewBuffer(example)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := v.WriteConfig(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := os.Stat(TempFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	otherV := viper.New()
+	otherV.SetConfigFile(TempFile)
+	if err = otherV.ReadInConfig(); err != nil {
+		t.Fatal(err)
+	}
+
+	if otherV.GetStringMapString("test")["host"] != "127.0.0.1" {
+		t.Fatal(fmt.Sprintf("get test.host is: %v, expected is: %v", otherV.GetStringMapString("test")["host"], "127.0.0.1"))
+	}
+}
+
+func TestBindPFlag(t *testing.T) {
+	pflag.Int("age", 11, "age of you")
+	pflag.Parse()
+
+	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
+		t.Fatal(err)
+	}
+
+	if viper.GetInt("age") != 11 {
+		t.Fatal(fmt.Sprintf("get %v, expected %v", viper.GetInt("age"), 11))
+	}
+}
+
+func TestUnmarshal(t *testing.T) {
+	example := []byte(`
+host = "127.0.0.1"
+port = 3306
+`)
+
+	type Config struct {
+		Host string
+		Port int
+	}
+
+	var c Config
+
+	v := viper.New()
+	v.SetConfigType("toml")
+	if err := v.ReadConfig(bytes.NewBuffer(example)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := v.Unmarshal(&c); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Host != "127.0.0.1" {
+		t.Fatal(fmt.Sprintf("get %v, expected %v", c.Host, "127.0.0.1"))
+	}
+}
+
+func TestUnmarshalEmbedStruct(t *testing.T) {
+	example := []byte(`
+module:
+    enabled: true
+    token: 89h3f98hbwf987h3f98wenf89ehf
+`)
+
+	type moduleConfig struct {
+		Token string
+	}
+
+	type config struct {
+		Module struct {
+			Enabled      bool
+			moduleConfig `mapstructure:",squash"`
+		}
+	}
+
+	var c config
+
+	v := viper.New()
+	v.SetConfigType("yaml")
+	if err := v.ReadConfig(bytes.NewBuffer(example)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := v.Unmarshal(&c); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Module.Token != "89h3f98hbwf987h3f98wenf89ehf" {
+		t.Fatal(fmt.Sprintf("get %v", c.Module.Token))
+	}
+}
+
+func TestMarshalToml(t *testing.T) {
+	v := viper.New()
+	v.SetConfigFile("./testdata/test1.toml")
+	if err := v.ReadInConfig(); err != nil {
+		t.Fatal(err)
+	}
+
+	c := v.AllSettings()
+	bs, err := toml.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(bs))
 }
