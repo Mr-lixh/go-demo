@@ -29,11 +29,11 @@ func RegisterProvider(name string, provider Factory) {
 		glog.Fatalf("Provider %q was registered twice", name)
 	}
 
-	glog.V(1).Infof("Registered provider %q", name)
+	glog.V(1).Infof("Registered providers %q", name)
 	providers[name] = provider
 }
 
-// IsProvider returns true if name corresponds to an already registered provider.
+// IsProvider returns true if name corresponds to an already registered providers.
 func IsProvider(name string) bool {
 	providersMutex.Lock()
 	defer providersMutex.Unlock()
@@ -42,10 +42,10 @@ func IsProvider(name string) bool {
 	return found
 }
 
-// GetProvider creates an instance of the named provider, or nil if the name is unknown.
-// The error return is only used if the named provider was known but failed to initialize.
+// GetProvider creates an instance of the named providers, or nil if the name is unknown.
+// The error return is only used if the named providers was known but failed to initialize.
 // The config parameter specifies the io.Reader handler of the configuration file for the
-// provider, or nil for no configuration.
+// providers, or nil for no configuration.
 func GetProvider(name string, config io.Reader) (Interface, error) {
 	providersMutex.Lock()
 	defer providersMutex.Unlock()
@@ -57,13 +57,13 @@ func GetProvider(name string, config io.Reader) (Interface, error) {
 	return f(config)
 }
 
-// InitProvider creates an instance of the named provider.
+// InitProvider creates an instance of the named providers.
 func InitProvider(name string, configFilePath string) (Interface, error) {
 	var provider Interface
 	var err error
 
 	if name == "" {
-		glog.Info("No provider specified.")
+		glog.Info("No providers specified.")
 		return nil, nil
 	}
 
@@ -71,7 +71,7 @@ func InitProvider(name string, configFilePath string) (Interface, error) {
 		var config *os.File
 		config, err = os.Open(configFilePath)
 		if err != nil {
-			glog.Fatalf("Couldn't open provider configuration %s: %#v", configFilePath, err)
+			glog.Fatalf("Couldn't open providers configuration %s: %#v", configFilePath, err)
 		}
 
 		defer config.Close()
@@ -81,10 +81,10 @@ func InitProvider(name string, configFilePath string) (Interface, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("could not init provider %q: %v", name, err)
+		return nil, fmt.Errorf("could not init providers %q: %v", name, err)
 	}
 	if provider == nil {
-		return nil, fmt.Errorf("unknown provider %q", name)
+		return nil, fmt.Errorf("unknown providers %q", name)
 	}
 
 	return provider, nil

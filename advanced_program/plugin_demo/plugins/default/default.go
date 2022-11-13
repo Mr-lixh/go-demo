@@ -28,7 +28,7 @@ func (p *Provider) Method2() error {
 
 // newDefaultProvider creates a new instance of DefaultProvider.
 func newDefaultProvider(config io.Reader) (*Provider, error) {
-	// init provider config by config or use default config
+	// init providers config by config or use default config
 	// ......
 
 	return CreateDefaultProvider(config)

@@ -248,3 +248,26 @@ func TestMarshalToml(t *testing.T) {
 
 	fmt.Println(string(bs))
 }
+
+func TestChangeDelimiter(t *testing.T) {
+	conf := `
+[elog]
+elogLocal = false
+elogComsumer = 2
+elogHost = "127.0.0.1"
+elogS3ep = "oss-shanghai-js.openstorage.cn"
+
+[wrapper]
+"ctrl.meter" = "false"
+`
+	v := viper.NewWithOptions(viper.KeyDelimiter("::"))
+	v.SetConfigType("toml")
+
+	err := v.ReadConfig(bytes.NewReader([]byte(conf)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := v.AllSettings()
+	fmt.Printf("%v", c)
+}

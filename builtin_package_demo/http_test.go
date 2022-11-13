@@ -3,10 +3,14 @@ package builtin_package_demo
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -81,4 +85,36 @@ func TestGraceShutdown(t *testing.T) {
 
 	<-done
 	log.Println("Server stopped")
+}
+
+func TestDumpRequest(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dump, err := httputil.DumpRequest(r, true)
+		if err != nil {
+			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Fprintf(w, "%q", dump)
+	}))
+	defer ts.Close()
+
+	const body = "test body"
+	req, err := http.NewRequest("POST", ts.URL, strings.NewReader(body))
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	req.Host = "www.example.com"
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	fmt.Println(string(b))
 }

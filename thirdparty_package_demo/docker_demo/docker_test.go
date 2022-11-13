@@ -135,7 +135,7 @@ func TestTopContainer(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	body, err := cli.ContainerTop(ctx, "container-id", []string{})
+	body, err := cli.ContainerTop(ctx, "26ccd503b2faf03a3311e16df88bc3956ef5714157500f7a902d608f0d8e2415", []string{})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
